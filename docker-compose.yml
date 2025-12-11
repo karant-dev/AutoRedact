@@ -1,0 +1,14 @@
+services:
+  autoredact:
+    image: karantdev/autoredact:latest
+    container_name: autoredact
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true

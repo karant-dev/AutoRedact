@@ -8,7 +8,14 @@
     "build": "tsc -b && vite build",
     "license": "GPL-3.0",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "bash -c 'npx tsc -b'",
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "jspdf": "^3.0.4",
@@ -29,6 +36,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",

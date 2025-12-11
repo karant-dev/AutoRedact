@@ -23,8 +23,15 @@ All processing happens 100% in your browser. Your images never touch a server.
 ## 🚀 Quick Start
 
 ```bash
+# Option 1: NPM (Local Dev)
 npm install
 npm run dev
+
+# Option 2: Docker (Easiest)
+docker run -p 8080:8080 karantdev/autoredact:latest
+
+# Option 3: Docker Compose
+docker compose up -d
 ```
 
 Open [http://localhost:5173](http://localhost:5173) and drop your images.
