@@ -29,6 +29,25 @@ By contributing to this project, you agree that your contributions will be licen
     npm run dev
     ```
 
+## 🌿 development Workflow
+
+**Direct commits to `main` are blocked.** You must use Pull Requests.
+
+1.  **Create a Branch**:
+    ```bash
+    git checkout -b feature/my-cool-feature
+    ```
+2.  **Hack Away**: Make your changes.
+3.  **Commit**: (Husky will run checks automatically)
+    ```bash
+    git commit -m "feat: add cool feature"
+    ```
+4.  **Push & PR**:
+    ```bash
+    git push origin feature/my-cool-feature
+    ```
+    Open a Pull Request on GitHub. CI must pass before merging.
+
 ## 🧪 Quality Standards
 
 We use **Husky** to enforce quality before every commit.

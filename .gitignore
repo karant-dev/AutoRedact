@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 Archive.zip
+GEMINI.md
 
 # Editor directories and files
 .vscode/*
