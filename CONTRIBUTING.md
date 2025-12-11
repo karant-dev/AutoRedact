@@ -29,7 +29,7 @@ By contributing to this project, you agree that your contributions will be licen
     npm run dev
     ```
 
-## 🌿 development Workflow
+## 🌿 Development Workflow
 
 **Direct commits to `main` are blocked.** You must use Pull Requests.
 
