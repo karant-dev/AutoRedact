@@ -15,6 +15,7 @@ jobs:
       contents: write
       packages: write
       id-token: write # Required for Cosign keyless signing
+      security-events: write # Required for uploading Trivy SARIF results
 
     steps:
       - name: Checkout repository
@@ -70,7 +71,7 @@ jobs:
           exit-code: '1' # Fail the build on vulnerability
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() # Upload results even if scan fails
         with:
           sarif_file: 'trivy-results.sarif'
