@@ -17,3 +17,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "wednesday"
+    groups:
+      actions:
+        patterns:
+          - "*"
