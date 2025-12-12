@@ -46,12 +46,15 @@ export const findCustomDateMatches = (
     for (const dateStr of customDates) {
         const patterns = generateDatePatterns(dateStr);
         for (const pattern of patterns) {
-            let match;
+            pattern.lastIndex = 0;
+            let match: RegExpExecArray | null;
             while ((match = pattern.exec(text)) !== null) {
                 // Avoid duplicate matches at the same position
-                const exists = matches.some(m => m.index === match!.index && m.text === match![0]);
+                const matchIndex = match.index;
+                const matchText = match[0];
+                const exists = matches.some(m => m.index === matchIndex && m.text === matchText);
                 if (!exists) {
-                    matches.push({ text: match[0], type, index: match.index });
+                    matches.push({ text: matchText, type, index: matchIndex });
                 }
             }
         }
@@ -70,6 +73,7 @@ export const findCustomRegexMatches = (
         try {
             const flags = rule.caseSensitive ? 'g' : 'gi';
             const pattern = new RegExp(rule.pattern, flags);
+            pattern.lastIndex = 0;
             let match;
             while ((match = pattern.exec(text)) !== null) {
                 matches.push({ text: match[0], type, index: match.index });

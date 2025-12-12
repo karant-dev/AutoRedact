@@ -95,7 +95,12 @@ function isValidDate(date: ParsedDate): boolean {
     if (month < 1 || month > 12) return false;
     if (day < 1 || day > 31) return false;
     if (year < 1900 || year > 2100) return false;
-    return true;
+    
+    // Use native Date for proper validation (handles leap years, days per month)
+    const testDate = new Date(year, month - 1, day);
+    return testDate.getFullYear() === year && 
+           testDate.getMonth() === month - 1 && 
+           testDate.getDate() === day;
 }
 
 /**
