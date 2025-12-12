@@ -158,8 +158,9 @@ export function SettingsDropdown({
                                         {onRemoveFromAllowlist && (
                                             <button
                                                 onClick={() => onRemoveFromAllowlist(item)}
-                                                className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                                className="text-slate-500 hover:text-red-400 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all flex-shrink-0 p-1"
                                                 title="Remove"
+                                                aria-label={`Remove ${item} from safe values`}
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
