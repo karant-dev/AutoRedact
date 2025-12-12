@@ -1,6 +1,7 @@
 import { createWorker } from 'tesseract.js';
 import type { DetectedItem, DetectionSettings } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
+import { DEFAULT_ALLOWLIST } from '../constants/config';
 import { preprocessImage } from './canvas';
 
 // Helper: find all pattern matches with their positions
@@ -14,6 +15,20 @@ export const findMatches = (pattern: RegExp, text: string, type: DetectedItem['t
     return matches;
 };
 
+// Helper: check if a text matches any allowlisted value (case-insensitive)
+export const isAllowlisted = (text: string, allowlist: string[]): boolean => {
+    const lowerText = text.toLowerCase();
+    return allowlist.some(allowed => allowed.toLowerCase() === lowerText);
+};
+
+// Helper: filter matches against allowlist
+export const filterAllowlistedMatches = <T extends { text: string }>(
+    matches: T[],
+    allowlist: string[]
+): T[] => {
+    return matches.filter(match => !isAllowlisted(match.text, allowlist));
+};
+
 // Default settings for backward compatibility (all enabled)
 const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
     email: true,
@@ -21,6 +36,7 @@ const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
     creditCard: true,
     secret: true,
     pii: true,
+    allowlist: DEFAULT_ALLOWLIST,
 };
 
 interface ProcessImageOptions {
@@ -138,23 +154,31 @@ export const processImageForBatch = async (
         });
     }
 
-    const allMatches = [...emailMatches, ...ipMatches, ...ccMatches, ...piiMatches, ...secretMatches];
+    // Apply allowlist filtering to all match types
+    const allowlist = detectionSettings.allowlist || [];
+    const filteredEmailMatches = filterAllowlistedMatches(emailMatches, allowlist);
+    const filteredIpMatches = filterAllowlistedMatches(ipMatches, allowlist);
+    const filteredCcMatches = filterAllowlistedMatches(ccMatches, allowlist);
+    const filteredPiiMatches = filterAllowlistedMatches(piiMatches, allowlist);
+    const filteredSecretMatches = filterAllowlistedMatches(secretMatches, allowlist);
+
+    const allMatches = [...filteredEmailMatches, ...filteredIpMatches, ...filteredCcMatches, ...filteredPiiMatches, ...filteredSecretMatches];
 
     console.log(`[Batch] Matches for ${file.name}:`, {
-        emails: emailMatches.map(m => m.text),
-        ips: ipMatches.map(m => m.text),
-        creditCards: ccMatches.map(m => m.text),
-        secrets: secretMatches.map(m => m.text),
-        pii: piiMatches.map(m => m.text),
+        emails: filteredEmailMatches.map(m => m.text),
+        ips: filteredIpMatches.map(m => m.text),
+        creditCards: filteredCcMatches.map(m => m.text),
+        secrets: filteredSecretMatches.map(m => m.text),
+        pii: filteredPiiMatches.map(m => m.text),
     });
 
     // Create Stats Breakdown (Count actual entities, not redaction boxes)
     const detectedBreakdown = {
-        emails: emailMatches.length,
-        ips: ipMatches.length,
-        creditCards: ccMatches.length,
-        secrets: secretMatches.length,
-        pii: piiMatches.length,
+        emails: filteredEmailMatches.length,
+        ips: filteredIpMatches.length,
+        creditCards: filteredCcMatches.length,
+        secrets: filteredSecretMatches.length,
+        pii: filteredPiiMatches.length,
     };
     const detectedCount = Object.values(detectedBreakdown).reduce((a, b) => a + b, 0);
 

@@ -1,12 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import type { DetectionSettings } from '../types';
 
+type BooleanSettingKey = 'email' | 'ip' | 'creditCard' | 'secret' | 'pii';
+
 interface SettingsDropdownProps {
     settings: DetectionSettings;
     onUpdateSetting: (key: keyof DetectionSettings, value: boolean) => void;
+    onAddToAllowlist?: (value: string) => void;
+    onRemoveFromAllowlist?: (value: string) => void;
+    onResetAllowlist?: () => void;
 }
 
-const SETTING_LABELS: Record<keyof DetectionSettings, string> = {
+const SETTING_LABELS: Record<BooleanSettingKey, string> = {
     email: 'Emails',
     ip: 'IPv4 / IPv6',
     creditCard: 'Credit Cards',
@@ -14,8 +19,15 @@ const SETTING_LABELS: Record<keyof DetectionSettings, string> = {
     pii: 'PII (SSN, etc.)',
 };
 
-export function SettingsDropdown({ settings, onUpdateSetting }: SettingsDropdownProps) {
+export function SettingsDropdown({
+    settings,
+    onUpdateSetting,
+    onAddToAllowlist,
+    onRemoveFromAllowlist,
+    onResetAllowlist,
+}: SettingsDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [newAllowlistValue, setNewAllowlistValue] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
@@ -31,6 +43,20 @@ export function SettingsDropdown({ settings, onUpdateSetting }: SettingsDropdown
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
     }, [isOpen]);
+
+    const handleAddAllowlistEntry = () => {
+        if (newAllowlistValue.trim() && onAddToAllowlist) {
+            onAddToAllowlist(newAllowlistValue.trim());
+            setNewAllowlistValue('');
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddAllowlistEntry();
+        }
+    };
 
     return (
         <div className="relative" ref={dropdownRef}>
@@ -48,13 +74,14 @@ export function SettingsDropdown({ settings, onUpdateSetting }: SettingsDropdown
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-xl bg-slate-900 border border-slate-700 shadow-xl z-50">
+                <div className="absolute right-0 mt-2 w-72 rounded-xl bg-slate-900 border border-slate-700 shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+                    {/* Detection Types Section */}
                     <div className="p-3 border-b border-slate-700">
                         <h3 className="text-sm font-semibold text-white">Detection Types</h3>
                         <p className="text-xs text-slate-400 mt-1">Choose what to redact</p>
                     </div>
-                    <div className="p-2">
-                        {(Object.keys(SETTING_LABELS) as Array<keyof DetectionSettings>).map((key) => (
+                    <div className="p-2 border-b border-slate-700">
+                        {(Object.keys(SETTING_LABELS) as Array<BooleanSettingKey>).map((key) => (
                             <label
                                 key={key}
                                 className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800 cursor-pointer transition-colors"
@@ -68,6 +95,76 @@ export function SettingsDropdown({ settings, onUpdateSetting }: SettingsDropdown
                                 />
                             </label>
                         ))}
+                    </div>
+
+                    {/* Safe Values (Allowlist) Section */}
+                    <div className="p-3 border-b border-slate-700">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">Safe Values</h3>
+                                <p className="text-xs text-slate-400 mt-1">Never redact these</p>
+                            </div>
+                            {onResetAllowlist && (
+                                <button
+                                    onClick={onResetAllowlist}
+                                    className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                                    title="Reset to defaults"
+                                >
+                                    Reset
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    <div className="p-2">
+                        {/* Add new entry input */}
+                        {onAddToAllowlist && (
+                            <div className="flex gap-2 mb-2 p-1">
+                                <input
+                                    type="text"
+                                    value={newAllowlistValue}
+                                    onChange={(e) => setNewAllowlistValue(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Add safe value..."
+                                    className="flex-1 px-2 py-1 text-sm bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                                />
+                                <button
+                                    onClick={handleAddAllowlistEntry}
+                                    disabled={!newAllowlistValue.trim()}
+                                    className="px-2 py-1 text-sm bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Allowlist entries */}
+                        <div className="max-h-32 overflow-y-auto">
+                            {settings.allowlist && settings.allowlist.length > 0 ? (
+                                settings.allowlist.map((item) => (
+                                    <div
+                                        key={item}
+                                        className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800 group"
+                                    >
+                                        <span className="text-sm text-slate-300 font-mono truncate" title={item}>
+                                            {item}
+                                        </span>
+                                        {onRemoveFromAllowlist && (
+                                            <button
+                                                onClick={() => onRemoveFromAllowlist(item)}
+                                                className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                                                title="Remove"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-xs text-slate-500 text-center py-2">No safe values defined</p>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

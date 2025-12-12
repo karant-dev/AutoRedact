@@ -4,9 +4,18 @@ import type { DetectionSettings } from '../types';
 interface HeaderProps {
     settings: DetectionSettings;
     onUpdateSetting: (key: keyof DetectionSettings, value: boolean) => void;
+    onAddToAllowlist?: (value: string) => void;
+    onRemoveFromAllowlist?: (value: string) => void;
+    onResetAllowlist?: () => void;
 }
 
-export function Header({ settings, onUpdateSetting }: HeaderProps) {
+export function Header({
+    settings,
+    onUpdateSetting,
+    onAddToAllowlist,
+    onRemoveFromAllowlist,
+    onResetAllowlist,
+}: HeaderProps) {
     return (
         <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
             <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -19,7 +28,13 @@ export function Header({ settings, onUpdateSetting }: HeaderProps) {
                         <p className="text-xs text-slate-400">Automatic. Private. Secure.</p>
                     </div>
                 </div>
-                <SettingsDropdown settings={settings} onUpdateSetting={onUpdateSetting} />
+                <SettingsDropdown
+                    settings={settings}
+                    onUpdateSetting={onUpdateSetting}
+                    onAddToAllowlist={onAddToAllowlist}
+                    onRemoveFromAllowlist={onRemoveFromAllowlist}
+                    onResetAllowlist={onResetAllowlist}
+                />
             </div>
         </header>
     );

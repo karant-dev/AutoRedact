@@ -16,7 +16,7 @@ import { ImagePreviewModal } from './components/ImagePreviewModal';
 // ============================================================================
 function App() {
   // Detection Settings (persisted to localStorage)
-  const { settings, updateSetting } = useDetectionSettings();
+  const { settings, updateSetting, addToAllowlist, removeFromAllowlist, resetAllowlist } = useDetectionSettings();
 
   // Hooks
   const {
@@ -126,7 +126,13 @@ function App() {
   // ============================================================================
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
-      <Header settings={settings} onUpdateSetting={updateSetting} />
+      <Header
+        settings={settings}
+        onUpdateSetting={updateSetting}
+        onAddToAllowlist={addToAllowlist}
+        onRemoveFromAllowlist={removeFromAllowlist}
+        onResetAllowlist={resetAllowlist}
+      />
 
       <main className="max-w-6xl mx-auto px-6 py-12 flex-grow w-full">
         {/* Main Content */}

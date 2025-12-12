@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
 import type { DetectedItem, ProcessingState, DetectionSettings } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
-import { findMatches } from '../utils/ocr';
+import { findMatches, filterAllowlistedMatches } from '../utils/ocr';
 import { preprocessImage } from '../utils/canvas';
 
 export function useOCR(detectionSettings: DetectionSettings) {
@@ -153,15 +153,23 @@ export function useOCR(detectionSettings: DetectionSettings) {
                 });
             }
 
-            const allMatches = [...emailMatches, ...ipMatches, ...ccMatches, ...piiMatches, ...secretMatches];
+            // Apply allowlist filtering to all match types
+            const allowlist = detectionSettings.allowlist || [];
+            const filteredEmailMatches = filterAllowlistedMatches(emailMatches, allowlist);
+            const filteredIpMatches = filterAllowlistedMatches(ipMatches, allowlist);
+            const filteredCcMatches = filterAllowlistedMatches(ccMatches, allowlist);
+            const filteredPiiMatches = filterAllowlistedMatches(piiMatches, allowlist);
+            const filteredSecretMatches = filterAllowlistedMatches(secretMatches, allowlist);
+
+            const allMatches = [...filteredEmailMatches, ...filteredIpMatches, ...filteredCcMatches, ...filteredPiiMatches, ...filteredSecretMatches];
 
             // Update stats with Entity counts
             setDetectionStats({
-                emails: emailMatches.length,
-                ips: ipMatches.length,
-                creditCards: ccMatches.length,
-                secrets: secretMatches.length,
-                pii: piiMatches.length,
+                emails: filteredEmailMatches.length,
+                ips: filteredIpMatches.length,
+                creditCards: filteredCcMatches.length,
+                secrets: filteredSecretMatches.length,
+                pii: filteredPiiMatches.length,
             });
 
             // Use blocks for precise redaction with Positional Mapping

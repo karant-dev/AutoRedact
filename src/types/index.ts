@@ -42,4 +42,5 @@ export interface DetectionSettings {
   creditCard: boolean;
   secret: boolean;
   pii: boolean;
+  allowlist: string[];
 }
