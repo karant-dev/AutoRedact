@@ -59,6 +59,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            CHANGELOG.md
+
       # 2. Scan Local Image with Trivy
       # Fail if Critical/High vulnerabilities are found
       - name: Run Trivy vulnerability scanner
