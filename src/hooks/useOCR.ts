@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
 import type { DetectedItem, ProcessingState, DetectionSettings } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
-import { findMatches, filterAllowlistedMatches, findBlockWordMatches, findCustomDateMatches, findCustomRegexMatches } from '../utils/ocr';
+import { findMatches, filterAllowlistedMatches, findBlockWordMatches, findCustomDateMatches, findCustomRegexMatches, hasValidOverlap } from '../utils/ocr';
 import { preprocessImage } from '../utils/canvas';
 
 export function useOCR(detectionSettings: DetectionSettings) {
@@ -201,22 +201,10 @@ export function useOCR(detectionSettings: DetectionSettings) {
                                     const wordStart = index;
                                     const wordEnd = index + wordText.length;
 
-                                    // Check overlap with additional text-based validation
-                                    const match = allMatches.find(m => {
-                                        const mStart = m.index;
-                                        const mEnd = m.index + m.text.length;
-                                        const hasPositionalOverlap = wordStart < mEnd && wordEnd > mStart;
-                                        
-                                        if (!hasPositionalOverlap) return false;
-                                        
-                                        // Additional text-based validation to avoid over-redaction:
-                                        // The word should contain the match text, or vice versa
-                                        const wordLower = wordText.toLowerCase();
-                                        const matchLower = m.text.toLowerCase();
-                                        const hasTextOverlap = wordLower.includes(matchLower) || matchLower.includes(wordLower);
-                                        
-                                        return hasTextOverlap;
-                                    });
+                                    // Check overlap using shared helper for validation
+                                    const match = allMatches.find(m => 
+                                        hasValidOverlap(wordStart, wordEnd, wordText, m.index, m.index + m.text.length, m.text)
+                                    );
 
                                     if (match) {
                                         const bbox = word.bbox;

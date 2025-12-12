@@ -100,6 +100,26 @@ export const filterAllowlistedMatches = <T extends { text: string }>(
     return matches.filter(match => !isAllowlisted(match.text, allowlist));
 };
 
+// Helper: check if word has valid overlap with a match (both positional and text-based)
+export const hasValidOverlap = (
+    wordStart: number,
+    wordEnd: number,
+    wordText: string,
+    matchStart: number,
+    matchEnd: number,
+    matchText: string
+): boolean => {
+    // Check positional overlap: (StartA < EndB) and (EndA > StartB)
+    const hasPositionalOverlap = wordStart < matchEnd && wordEnd > matchStart;
+    if (!hasPositionalOverlap) return false;
+    
+    // Additional text-based validation to avoid over-redaction:
+    // The word should contain the match text, or vice versa
+    const wordLower = wordText.toLowerCase();
+    const matchLower = matchText.toLowerCase();
+    return wordLower.includes(matchLower) || matchLower.includes(wordLower);
+};
+
 // Default settings for backward compatibility (all enabled)
 const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
     email: true,
@@ -283,24 +303,10 @@ export const processImageForBatch = async (
                             const wordStart = index;
                             const wordEnd = index + wordText.length;
 
-                            // Check for spatial overlap with any sensitive match
-                            // Overlap condition: (StartA < EndB) and (EndA > StartB)
-                            // Additional check: word must actually contain/overlap with the match text
-                            const match = allMatches.find(m => {
-                                const matchStart = m.index;
-                                const matchEnd = m.index + m.text.length;
-                                const hasPositionalOverlap = wordStart < matchEnd && wordEnd > matchStart;
-                                
-                                if (!hasPositionalOverlap) return false;
-                                
-                                // Additional text-based validation to avoid over-redaction:
-                                // The word should contain the match text, or vice versa
-                                const wordLower = wordText.toLowerCase();
-                                const matchLower = m.text.toLowerCase();
-                                const hasTextOverlap = wordLower.includes(matchLower) || matchLower.includes(wordLower);
-                                
-                                return hasTextOverlap;
-                            });
+                            // Check for spatial overlap with any sensitive match using helper
+                            const match = allMatches.find(m => 
+                                hasValidOverlap(wordStart, wordEnd, wordText, m.index, m.index + m.text.length, m.text)
+                            );
 
                             if (match) {
                                 detected.push({ text: wordText, type: match.type, bbox: word.bbox });
