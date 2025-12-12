@@ -8,8 +8,7 @@ export const DEFAULT_ALLOWLIST = [
     'localhost',
     '127.0.0.1',
     '::1',
-    // Local IP ranges (common examples)
-    '0.0.0.0',
+    // Common local gateway/router IPs
     '192.168.0.1',
     '192.168.1.1',
     '10.0.0.1',
