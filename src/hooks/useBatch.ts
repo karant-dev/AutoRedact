@@ -4,7 +4,7 @@ import { processPdfFile } from '../utils/pdf';
 import { processImageForBatch } from '../utils/ocr';
 import { downloadBatchAsZip, downloadBatchAsPdf } from '../utils/exporters';
 
-export function useBatch() {
+export function useBatch(allowlist: string[] = []) {
     const [batchMode, setBatchMode] = useState(false);
     const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
     const [batchProgress, setBatchProgress] = useState<BatchProgress>({
@@ -74,7 +74,7 @@ export function useBatch() {
             ));
 
             try {
-                const result = await processImageForBatch(item.file);
+                const result = await processImageForBatch(item.file, undefined, allowlist);
 
                 // Update with result
                 setBatchItems(prev => prev.map(b =>

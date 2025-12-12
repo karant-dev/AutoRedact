@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useOCR } from './hooks/useOCR';
 import { useBatch } from './hooks/useBatch';
+import { useAllowlist } from './hooks/useAllowlist';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
@@ -9,21 +10,25 @@ import { FeaturesGrid } from './components/FeaturesGrid';
 import { ResultsView } from './components/results/ResultsView';
 import { BatchView } from './components/batch';
 import { ImagePreviewModal } from './components/ImagePreviewModal';
+import { SettingsModal } from './components/SettingsModal';
 
 // ============================================================================
 // MAIN APP COMPONENT
 // ============================================================================
 function App() {
+  // Allowlist context
+  const { allowlist } = useAllowlist();
+
   // Hooks
   const {
     imageFile,
     detectedItems,
     processingState,
     detectionStats,
-    imageRef,
+    loadedImage,
     processImage,
     reset: resetOCR,
-  } = useOCR();
+  } = useOCR(allowlist);
 
   const {
     batchMode,
@@ -34,11 +39,12 @@ function App() {
     resetBatch,
     handleDownloadZip,
     handleDownloadPdf,
-  } = useBatch();
+  } = useBatch(allowlist);
 
   // Local State
   const [isDragging, setIsDragging] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,7 +128,7 @@ function App() {
   // ============================================================================
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
-      <Header />
+      <Header onSettingsClick={() => setShowSettings(true)} />
 
       <main className="max-w-6xl mx-auto px-6 py-12 flex-grow w-full">
         {/* Main Content */}
@@ -154,7 +160,7 @@ function App() {
           <ResultsView
             processingState={processingState}
             stats={detectionStats}
-            image={imageRef.current}
+            image={loadedImage}
             items={detectedItems}
             originalFileName={imageFile?.name}
             onReset={handleReset}
@@ -167,6 +173,11 @@ function App() {
       <ImagePreviewModal
         image={previewImage}
         onClose={() => setPreviewImage(null)}
+      />
+
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
       />
     </div>
   );

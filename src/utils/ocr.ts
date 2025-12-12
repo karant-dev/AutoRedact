@@ -1,6 +1,7 @@
 import { createWorker } from 'tesseract.js';
 import type { DetectedItem } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
+import { isAllowlisted } from '../constants/allowlist';
 import { preprocessImage } from './canvas';
 
 // Helper: find all pattern matches with their positions
@@ -17,7 +18,8 @@ export const findMatches = (pattern: RegExp, text: string, type: DetectedItem['t
 // Process a single image and return canvas data URL (for batch processing)
 export const processImageForBatch = async (
     file: File,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    allowlist: string[] = []
 ): Promise<{ detectedCount: number; detectedBreakdown: { emails: number; ips: number; creditCards: number; secrets: number; pii: number }; dataUrl: string }> => {
     // Create image URL
     const url = URL.createObjectURL(file);
@@ -104,23 +106,34 @@ export const processImageForBatch = async (
         secretMatches = [...secretMatches, ...findMatches(pattern, fullText, 'secret')];
     });
 
-    const allMatches = [...emailMatches, ...ipMatches, ...ccMatches, ...piiMatches, ...secretMatches];
+    // Filter helper to remove allowlisted matches
+    const filterAllowlisted = <T extends { text: string }>(matches: T[]): T[] =>
+        matches.filter(m => !isAllowlisted(m.text, allowlist));
+
+    // Apply allowlist filtering to all match categories
+    const filteredEmailMatches = filterAllowlisted(emailMatches);
+    const filteredIpMatches = filterAllowlisted(ipMatches);
+    const filteredCcMatches = filterAllowlisted(ccMatches);
+    const filteredPiiMatches = filterAllowlisted(piiMatches);
+    const filteredSecretMatches = filterAllowlisted(secretMatches);
+
+    const allMatches = [...filteredEmailMatches, ...filteredIpMatches, ...filteredCcMatches, ...filteredPiiMatches, ...filteredSecretMatches];
 
     console.log(`[Batch] Matches for ${file.name}:`, {
-        emails: emailMatches.map(m => m.text),
-        ips: ipMatches.map(m => m.text),
-        creditCards: ccMatches.map(m => m.text),
-        secrets: secretMatches.map(m => m.text),
-        pii: piiMatches.map(m => m.text),
+        emails: filteredEmailMatches.map(m => m.text),
+        ips: filteredIpMatches.map(m => m.text),
+        creditCards: filteredCcMatches.map(m => m.text),
+        secrets: filteredSecretMatches.map(m => m.text),
+        pii: filteredPiiMatches.map(m => m.text),
     });
 
-    // Create Stats Breakdown (Count actual entities, not redaction boxes)
+    // Create Stats Breakdown (Count actual entities, not redaction boxes) - after filtering
     const detectedBreakdown = {
-        emails: emailMatches.length,
-        ips: ipMatches.length,
-        creditCards: ccMatches.length,
-        secrets: secretMatches.length,
-        pii: piiMatches.length,
+        emails: filteredEmailMatches.length,
+        ips: filteredIpMatches.length,
+        creditCards: filteredCcMatches.length,
+        secrets: filteredSecretMatches.length,
+        pii: filteredPiiMatches.length,
     };
     const detectedCount = Object.values(detectedBreakdown).reduce((a, b) => a + b, 0);
 

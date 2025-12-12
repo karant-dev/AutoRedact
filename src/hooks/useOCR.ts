@@ -1,11 +1,12 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
 import type { DetectedItem, ProcessingState } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
+import { isAllowlisted } from '../constants/allowlist';
 import { findMatches } from '../utils/ocr';
 import { preprocessImage } from '../utils/canvas';
 
-export function useOCR() {
+export function useOCR(allowlist: string[] = []) {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
@@ -23,7 +24,7 @@ export function useOCR() {
         pii: 0,
     });
 
-    const imageRef = useRef<HTMLImageElement | null>(null);
+    const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
 
     const reset = useCallback(() => {
         if (imageUrl) URL.revokeObjectURL(imageUrl);
@@ -32,7 +33,7 @@ export function useOCR() {
         setDetectedItems([]);
         setDetectionStats({ emails: 0, ips: 0, creditCards: 0, secrets: 0, pii: 0 });
         setProcessingState({ status: 'idle', progress: 0, message: '' });
-        imageRef.current = null;
+        setLoadedImage(null);
     }, [imageUrl]);
 
     const processImage = async (file: File) => {
@@ -56,7 +57,7 @@ export function useOCR() {
             img.onerror = () => reject(new Error('Failed to load image'));
         });
 
-        imageRef.current = img;
+        setLoadedImage(img);
 
         setProcessingState({
             status: 'scanning',
@@ -134,15 +135,26 @@ export function useOCR() {
                 secretMatches = [...secretMatches, ...findMatches(pattern, fullText, 'secret')];
             });
 
-            const allMatches = [...emailMatches, ...ipMatches, ...ccMatches, ...piiMatches, ...secretMatches];
+            // Filter helper to remove allowlisted matches
+            const filterAllowlisted = <T extends { text: string }>(matches: T[]): T[] =>
+                matches.filter(m => !isAllowlisted(m.text, allowlist));
 
-            // Update stats with Entity counts
+            // Apply allowlist filtering to all match categories
+            const filteredEmailMatches = filterAllowlisted(emailMatches);
+            const filteredIpMatches = filterAllowlisted(ipMatches);
+            const filteredCcMatches = filterAllowlisted(ccMatches);
+            const filteredPiiMatches = filterAllowlisted(piiMatches);
+            const filteredSecretMatches = filterAllowlisted(secretMatches);
+
+            const allMatches = [...filteredEmailMatches, ...filteredIpMatches, ...filteredCcMatches, ...filteredPiiMatches, ...filteredSecretMatches];
+
+            // Update stats with Entity counts (after filtering)
             setDetectionStats({
-                emails: emailMatches.length,
-                ips: ipMatches.length,
-                creditCards: ccMatches.length,
-                secrets: secretMatches.length,
-                pii: piiMatches.length,
+                emails: filteredEmailMatches.length,
+                ips: filteredIpMatches.length,
+                creditCards: filteredCcMatches.length,
+                secrets: filteredSecretMatches.length,
+                pii: filteredPiiMatches.length,
             });
 
             // Use blocks for precise redaction with Positional Mapping
@@ -264,7 +276,7 @@ export function useOCR() {
         detectedItems,
         processingState,
         detectionStats,
-        imageRef,
+        loadedImage,
         processImage,
         reset,
     };
