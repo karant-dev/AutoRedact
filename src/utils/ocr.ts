@@ -23,12 +23,17 @@ const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
     pii: true,
 };
 
+interface ProcessImageOptions {
+    onProgress?: (progress: number) => void;
+    detectionSettings?: DetectionSettings;
+}
+
 // Process a single image and return canvas data URL (for batch processing)
 export const processImageForBatch = async (
     file: File,
-    onProgress?: (progress: number) => void,
-    detectionSettings: DetectionSettings = DEFAULT_DETECTION_SETTINGS
+    options: ProcessImageOptions = {}
 ): Promise<{ detectedCount: number; detectedBreakdown: { emails: number; ips: number; creditCards: number; secrets: number; pii: number }; dataUrl: string }> => {
+    const { onProgress, detectionSettings = DEFAULT_DETECTION_SETTINGS } = options;
     // Create image URL
     const url = URL.createObjectURL(file);
 

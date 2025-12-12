@@ -74,7 +74,7 @@ export function useBatch(detectionSettings: DetectionSettings) {
             ));
 
             try {
-                const result = await processImageForBatch(item.file, undefined, detectionSettings);
+                const result = await processImageForBatch(item.file, { detectionSettings });
 
                 // Update with result
                 setBatchItems(prev => prev.map(b =>
