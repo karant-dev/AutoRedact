@@ -1,5 +1,5 @@
 import { createWorker } from 'tesseract.js';
-import type { DetectedItem } from '../types';
+import type { DetectedItem, DetectionSettings } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
 import { preprocessImage } from './canvas';
 
@@ -14,10 +14,20 @@ export const findMatches = (pattern: RegExp, text: string, type: DetectedItem['t
     return matches;
 };
 
+// Default settings for backward compatibility (all enabled)
+const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
+    email: true,
+    ip: true,
+    creditCard: true,
+    secret: true,
+    pii: true,
+};
+
 // Process a single image and return canvas data URL (for batch processing)
 export const processImageForBatch = async (
     file: File,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    detectionSettings: DetectionSettings = DEFAULT_DETECTION_SETTINGS
 ): Promise<{ detectedCount: number; detectedBreakdown: { emails: number; ips: number; creditCards: number; secrets: number; pii: number }; dataUrl: string }> => {
     // Create image URL
     const url = URL.createObjectURL(file);
@@ -77,32 +87,51 @@ export const processImageForBatch = async (
     const fullText = data.text || '';
     console.log('Detected Text (Batch):', fullText);
 
-    // 1. Email Matches
-    const emailMatches = findMatches(SENSITIVE_PATTERNS.email, fullText, 'email');
+    // 1. Email Matches (filtered by settings)
+    const emailMatches = detectionSettings.email
+        ? findMatches(SENSITIVE_PATTERNS.email, fullText, 'email')
+        : [];
 
-    // 2. IP Matches (IPv4 + IPv6 + MAC)
-    const ipv4Matches = findMatches(SENSITIVE_PATTERNS.ipv4, fullText, 'ip')
-        .filter(m => m.text.split('.').length === 4);
-    const ipv6Matches = findMatches(SENSITIVE_PATTERNS.ipv6, fullText, 'ip');
-    const macMatches = findMatches(SENSITIVE_PATTERNS.mac, fullText, 'ip');
+    // 2. IP Matches (IPv4 + IPv6 + MAC) (filtered by settings)
+    const ipv4Matches = detectionSettings.ip
+        ? findMatches(SENSITIVE_PATTERNS.ipv4, fullText, 'ip').filter(m => m.text.split('.').length === 4)
+        : [];
+    const ipv6Matches = detectionSettings.ip
+        ? findMatches(SENSITIVE_PATTERNS.ipv6, fullText, 'ip')
+        : [];
+    const macMatches = detectionSettings.ip
+        ? findMatches(SENSITIVE_PATTERNS.mac, fullText, 'ip')
+        : [];
     const ipMatches = [...ipv4Matches, ...ipv6Matches, ...macMatches];
 
-    // 3. Credit Card Matches (Finance)
-    const ccBasicMatches = findMatches(SENSITIVE_PATTERNS.creditCard, fullText, 'creditCard');
-    const ibanMatches = findMatches(SENSITIVE_PATTERNS.iban, fullText, 'creditCard');
-    const btcMatches = findMatches(SENSITIVE_PATTERNS.bitcoin, fullText, 'creditCard');
+    // 3. Credit Card Matches (Finance) (filtered by settings)
+    const ccBasicMatches = detectionSettings.creditCard
+        ? findMatches(SENSITIVE_PATTERNS.creditCard, fullText, 'creditCard')
+        : [];
+    const ibanMatches = detectionSettings.creditCard
+        ? findMatches(SENSITIVE_PATTERNS.iban, fullText, 'creditCard')
+        : [];
+    const btcMatches = detectionSettings.creditCard
+        ? findMatches(SENSITIVE_PATTERNS.bitcoin, fullText, 'creditCard')
+        : [];
     const ccMatches = [...ccBasicMatches, ...ibanMatches, ...btcMatches];
 
-    // 4. PII Matches (SSN, PAN)
-    const ssnMatches = findMatches(SENSITIVE_PATTERNS.ssn, fullText, 'pii');
-    const panMatches = findMatches(SENSITIVE_PATTERNS.pan, fullText, 'pii');
+    // 4. PII Matches (SSN, PAN) (filtered by settings)
+    const ssnMatches = detectionSettings.pii
+        ? findMatches(SENSITIVE_PATTERNS.ssn, fullText, 'pii')
+        : [];
+    const panMatches = detectionSettings.pii
+        ? findMatches(SENSITIVE_PATTERNS.pan, fullText, 'pii')
+        : [];
     const piiMatches = [...ssnMatches, ...panMatches];
 
-    // 5. Secrets Matches (All patterns in the array)
+    // 5. Secrets Matches (All patterns in the array) (filtered by settings)
     let secretMatches: Array<{ text: string, type: DetectedItem['type'], index: number }> = [];
-    SENSITIVE_PATTERNS.secrets.forEach(pattern => {
-        secretMatches = [...secretMatches, ...findMatches(pattern, fullText, 'secret')];
-    });
+    if (detectionSettings.secret) {
+        SENSITIVE_PATTERNS.secrets.forEach(pattern => {
+            secretMatches = [...secretMatches, ...findMatches(pattern, fullText, 'secret')];
+        });
+    }
 
     const allMatches = [...emailMatches, ...ipMatches, ...ccMatches, ...piiMatches, ...secretMatches];
 

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { BatchItem, BatchProgress } from '../types';
+import type { BatchItem, BatchProgress, DetectionSettings } from '../types';
 import { processPdfFile } from '../utils/pdf';
 import { processImageForBatch } from '../utils/ocr';
 import { downloadBatchAsZip, downloadBatchAsPdf } from '../utils/exporters';
 
-export function useBatch() {
+export function useBatch(detectionSettings: DetectionSettings) {
     const [batchMode, setBatchMode] = useState(false);
     const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
     const [batchProgress, setBatchProgress] = useState<BatchProgress>({
@@ -74,7 +74,7 @@ export function useBatch() {
             ));
 
             try {
-                const result = await processImageForBatch(item.file);
+                const result = await processImageForBatch(item.file, undefined, detectionSettings);
 
                 // Update with result
                 setBatchItems(prev => prev.map(b =>

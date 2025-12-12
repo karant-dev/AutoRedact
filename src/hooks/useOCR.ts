@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
-import type { DetectedItem, ProcessingState } from '../types';
+import type { DetectedItem, ProcessingState, DetectionSettings } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
 import { findMatches } from '../utils/ocr';
 import { preprocessImage } from '../utils/canvas';
 
-export function useOCR() {
+export function useOCR(detectionSettings: DetectionSettings) {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
@@ -23,7 +23,7 @@ export function useOCR() {
         pii: 0,
     });
 
-    const imageRef = useRef<HTMLImageElement | null>(null);
+    const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
 
     const reset = useCallback(() => {
         if (imageUrl) URL.revokeObjectURL(imageUrl);
@@ -32,7 +32,7 @@ export function useOCR() {
         setDetectedItems([]);
         setDetectionStats({ emails: 0, ips: 0, creditCards: 0, secrets: 0, pii: 0 });
         setProcessingState({ status: 'idle', progress: 0, message: '' });
-        imageRef.current = null;
+        setLoadedImage(null);
     }, [imageUrl]);
 
     const processImage = async (file: File) => {
@@ -56,7 +56,7 @@ export function useOCR() {
             img.onerror = () => reject(new Error('Failed to load image'));
         });
 
-        imageRef.current = img;
+        setLoadedImage(img);
 
         setProcessingState({
             status: 'scanning',
@@ -112,27 +112,46 @@ export function useOCR() {
             console.log('=== OCR TEXT-BASED DETECTION ===');
             console.log('Detected Text:', fullText);
 
-            // Find all sensitive items in the full text
-            const emailMatches = findMatches(SENSITIVE_PATTERNS.email, fullText, 'email');
-            const ipv4Matches = findMatches(SENSITIVE_PATTERNS.ipv4, fullText, 'ip')
-                .filter(m => m.text.split('.').length === 4);
-            const ipv6Matches = findMatches(SENSITIVE_PATTERNS.ipv6, fullText, 'ip');
-            const macMatches = findMatches(SENSITIVE_PATTERNS.mac, fullText, 'ip');
+            // Find all sensitive items in the full text (filtered by settings)
+            const emailMatches = detectionSettings.email
+                ? findMatches(SENSITIVE_PATTERNS.email, fullText, 'email')
+                : [];
+            const ipv4Matches = detectionSettings.ip
+                ? findMatches(SENSITIVE_PATTERNS.ipv4, fullText, 'ip').filter(m => m.text.split('.').length === 4)
+                : [];
+            const ipv6Matches = detectionSettings.ip
+                ? findMatches(SENSITIVE_PATTERNS.ipv6, fullText, 'ip')
+                : [];
+            const macMatches = detectionSettings.ip
+                ? findMatches(SENSITIVE_PATTERNS.mac, fullText, 'ip')
+                : [];
             const ipMatches = [...ipv4Matches, ...ipv6Matches, ...macMatches];
 
-            const ccBasicMatches = findMatches(SENSITIVE_PATTERNS.creditCard, fullText, 'creditCard');
-            const ibanMatches = findMatches(SENSITIVE_PATTERNS.iban, fullText, 'creditCard');
-            const btcMatches = findMatches(SENSITIVE_PATTERNS.bitcoin, fullText, 'creditCard');
+            const ccBasicMatches = detectionSettings.creditCard
+                ? findMatches(SENSITIVE_PATTERNS.creditCard, fullText, 'creditCard')
+                : [];
+            const ibanMatches = detectionSettings.creditCard
+                ? findMatches(SENSITIVE_PATTERNS.iban, fullText, 'creditCard')
+                : [];
+            const btcMatches = detectionSettings.creditCard
+                ? findMatches(SENSITIVE_PATTERNS.bitcoin, fullText, 'creditCard')
+                : [];
             const ccMatches = [...ccBasicMatches, ...ibanMatches, ...btcMatches];
 
-            const ssnMatches = findMatches(SENSITIVE_PATTERNS.ssn, fullText, 'pii');
-            const panMatches = findMatches(SENSITIVE_PATTERNS.pan, fullText, 'pii');
+            const ssnMatches = detectionSettings.pii
+                ? findMatches(SENSITIVE_PATTERNS.ssn, fullText, 'pii')
+                : [];
+            const panMatches = detectionSettings.pii
+                ? findMatches(SENSITIVE_PATTERNS.pan, fullText, 'pii')
+                : [];
             const piiMatches = [...ssnMatches, ...panMatches];
 
             let secretMatches: Array<{ text: string, type: DetectedItem['type'], index: number }> = [];
-            SENSITIVE_PATTERNS.secrets.forEach(pattern => {
-                secretMatches = [...secretMatches, ...findMatches(pattern, fullText, 'secret')];
-            });
+            if (detectionSettings.secret) {
+                SENSITIVE_PATTERNS.secrets.forEach(pattern => {
+                    secretMatches = [...secretMatches, ...findMatches(pattern, fullText, 'secret')];
+                });
+            }
 
             const allMatches = [...emailMatches, ...ipMatches, ...ccMatches, ...piiMatches, ...secretMatches];
 
@@ -264,7 +283,7 @@ export function useOCR() {
         detectedItems,
         processingState,
         detectionStats,
-        imageRef,
+        loadedImage,
         processImage,
         reset,
     };

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useOCR } from './hooks/useOCR';
 import { useBatch } from './hooks/useBatch';
+import { useDetectionSettings } from './hooks/useDetectionSettings';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { Hero } from './components/Hero';
@@ -14,16 +15,19 @@ import { ImagePreviewModal } from './components/ImagePreviewModal';
 // MAIN APP COMPONENT
 // ============================================================================
 function App() {
+  // Detection Settings (persisted to localStorage)
+  const { settings, updateSetting } = useDetectionSettings();
+
   // Hooks
   const {
     imageFile,
     detectedItems,
     processingState,
     detectionStats,
-    imageRef,
+    loadedImage,
     processImage,
     reset: resetOCR,
-  } = useOCR();
+  } = useOCR(settings);
 
   const {
     batchMode,
@@ -34,7 +38,7 @@ function App() {
     resetBatch,
     handleDownloadZip,
     handleDownloadPdf,
-  } = useBatch();
+  } = useBatch(settings);
 
   // Local State
   const [isDragging, setIsDragging] = useState(false);
@@ -122,7 +126,7 @@ function App() {
   // ============================================================================
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col">
-      <Header />
+      <Header settings={settings} onUpdateSetting={updateSetting} />
 
       <main className="max-w-6xl mx-auto px-6 py-12 flex-grow w-full">
         {/* Main Content */}
@@ -154,7 +158,7 @@ function App() {
           <ResultsView
             processingState={processingState}
             stats={detectionStats}
-            image={imageRef.current}
+            image={loadedImage}
             items={detectedItems}
             originalFileName={imageFile?.name}
             onReset={handleReset}

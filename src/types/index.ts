@@ -35,3 +35,11 @@ export interface BatchProgress {
   total: number;
   isProcessing: boolean;
 }
+
+export interface DetectionSettings {
+  email: boolean;
+  ip: boolean;
+  creditCard: boolean;
+  secret: boolean;
+  pii: boolean;
+}
