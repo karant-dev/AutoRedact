@@ -201,11 +201,21 @@ export function useOCR(detectionSettings: DetectionSettings) {
                                     const wordStart = index;
                                     const wordEnd = index + wordText.length;
 
-                                    // Check overlap
+                                    // Check overlap with additional text-based validation
                                     const match = allMatches.find(m => {
                                         const mStart = m.index;
                                         const mEnd = m.index + m.text.length;
-                                        return wordStart < mEnd && wordEnd > mStart;
+                                        const hasPositionalOverlap = wordStart < mEnd && wordEnd > mStart;
+                                        
+                                        if (!hasPositionalOverlap) return false;
+                                        
+                                        // Additional text-based validation to avoid over-redaction:
+                                        // The word should contain the match text, or vice versa
+                                        const wordLower = wordText.toLowerCase();
+                                        const matchLower = m.text.toLowerCase();
+                                        const hasTextOverlap = wordLower.includes(matchLower) || matchLower.includes(wordLower);
+                                        
+                                        return hasTextOverlap;
                                     });
 
                                     if (match) {
