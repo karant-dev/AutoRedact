@@ -24,13 +24,14 @@ export function AllowlistProvider({ children }: { children: ReactNode }) {
 
     const addToAllowlist = (value: string) => {
         const trimmedValue = value.trim();
-        if (trimmedValue && !allowlist.some(item => item.toLowerCase() === trimmedValue.toLowerCase())) {
+        if (trimmedValue && !allowlist.some(item => item.trim().toLowerCase() === trimmedValue.toLowerCase())) {
             setAllowlist(prev => [...prev, trimmedValue]);
         }
     };
 
     const removeFromAllowlist = (value: string) => {
-        setAllowlist(prev => prev.filter(item => item.toLowerCase() !== value.toLowerCase()));
+        const normalizedValue = value.trim().toLowerCase();
+        setAllowlist(prev => prev.filter(item => item.trim().toLowerCase() !== normalizedValue));
     };
 
     const resetToDefaults = () => {

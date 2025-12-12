@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
 import type { DetectedItem, ProcessingState } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
-import { isAllowlisted } from '../constants/allowlist';
+import { isAllowlisted, createAllowlistSet } from '../constants/allowlist';
 import { findMatches } from '../utils/ocr';
 import { preprocessImage } from '../utils/canvas';
 
@@ -135,9 +135,12 @@ export function useOCR(allowlist: string[] = []) {
                 secretMatches = [...secretMatches, ...findMatches(pattern, fullText, 'secret')];
             });
 
+            // Create normalized Set for O(1) lookups
+            const allowlistSet = createAllowlistSet(allowlist);
+
             // Filter helper to remove allowlisted matches
             const filterAllowlisted = <T extends { text: string }>(matches: T[]): T[] =>
-                matches.filter(m => !isAllowlisted(m.text, allowlist));
+                matches.filter(m => !isAllowlisted(m.text, allowlistSet));
 
             // Apply allowlist filtering to all match categories
             const filteredEmailMatches = filterAllowlisted(emailMatches);

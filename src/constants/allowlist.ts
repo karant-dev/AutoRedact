@@ -25,8 +25,17 @@ export const DEFAULT_ALLOWLIST = [
 // LocalStorage key for user allowlist
 export const ALLOWLIST_STORAGE_KEY = 'autoredact_allowlist';
 
+// Create a normalized Set for O(1) lookups
+export const createAllowlistSet = (allowlist: string[]): Set<string> => {
+    return new Set(allowlist.map(item => item.toLowerCase().trim()));
+};
+
 // Check if a value is in the allowlist (case-insensitive)
-export const isAllowlisted = (value: string, allowlist: string[]): boolean => {
+// Accepts either an array or a pre-normalized Set for better performance
+export const isAllowlisted = (value: string, allowlist: string[] | Set<string>): boolean => {
     const normalizedValue = value.toLowerCase().trim();
+    if (allowlist instanceof Set) {
+        return allowlist.has(normalizedValue);
+    }
     return allowlist.some(item => item.toLowerCase().trim() === normalizedValue);
 };
