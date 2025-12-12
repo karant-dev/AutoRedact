@@ -36,6 +36,13 @@ export interface BatchProgress {
   isProcessing: boolean;
 }
 
+export interface CustomRegexRule {
+  id: string;
+  pattern: string;
+  label?: string;
+  caseSensitive: boolean;
+}
+
 export interface DetectionSettings {
   email: boolean;
   ip: boolean;
@@ -43,4 +50,7 @@ export interface DetectionSettings {
   secret: boolean;
   pii: boolean;
   allowlist: string[];
+  blockWords: string[];
+  customDates: string[];
+  customRegex: CustomRegexRule[];
 }

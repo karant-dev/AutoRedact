@@ -16,7 +16,22 @@ import { ImagePreviewModal } from './components/ImagePreviewModal';
 // ============================================================================
 function App() {
   // Detection Settings (persisted to localStorage)
-  const { settings, updateSetting, addToAllowlist, removeFromAllowlist, resetAllowlist } = useDetectionSettings();
+  const { 
+    settings, 
+    updateSetting, 
+    addToAllowlist, 
+    removeFromAllowlist, 
+    resetAllowlist,
+    addBlockWord,
+    removeBlockWord,
+    resetBlockWords,
+    addCustomDate,
+    removeCustomDate,
+    resetCustomDates,
+    addCustomRegex,
+    removeCustomRegex,
+    resetCustomRegex,
+  } = useDetectionSettings();
 
   // Hooks
   const {
@@ -132,6 +147,15 @@ function App() {
         onAddToAllowlist={addToAllowlist}
         onRemoveFromAllowlist={removeFromAllowlist}
         onResetAllowlist={resetAllowlist}
+        onAddBlockWord={addBlockWord}
+        onRemoveBlockWord={removeBlockWord}
+        onResetBlockWords={resetBlockWords}
+        onAddCustomDate={addCustomDate}
+        onRemoveCustomDate={removeCustomDate}
+        onResetCustomDates={resetCustomDates}
+        onAddCustomRegex={addCustomRegex}
+        onRemoveCustomRegex={removeCustomRegex}
+        onResetCustomRegex={resetCustomRegex}
       />
 
       <main className="max-w-6xl mx-auto px-6 py-12 flex-grow w-full">

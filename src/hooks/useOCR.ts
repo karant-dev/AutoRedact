@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { createWorker } from 'tesseract.js';
 import type { DetectedItem, ProcessingState, DetectionSettings } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
-import { findMatches, filterAllowlistedMatches } from '../utils/ocr';
+import { findMatches, filterAllowlistedMatches, findBlockWordMatches, findCustomDateMatches, findCustomRegexMatches } from '../utils/ocr';
 import { preprocessImage } from '../utils/canvas';
 
 export function useOCR(detectionSettings: DetectionSettings) {
@@ -153,6 +153,12 @@ export function useOCR(detectionSettings: DetectionSettings) {
                 });
             }
 
+            // Custom Rules: Block Words, Custom Dates, Custom Regex (all treated as 'pii' type)
+            const blockWordMatches = findBlockWordMatches(detectionSettings.blockWords || [], fullText, 'pii');
+            const customDateMatches = findCustomDateMatches(detectionSettings.customDates || [], fullText, 'pii');
+            const customRegexMatches = findCustomRegexMatches(detectionSettings.customRegex || [], fullText, 'pii');
+            const customMatches = [...blockWordMatches, ...customDateMatches, ...customRegexMatches];
+
             // Apply allowlist filtering to all match types
             const allowlist = detectionSettings.allowlist || [];
             const filteredEmailMatches = filterAllowlistedMatches(emailMatches, allowlist);
@@ -160,16 +166,17 @@ export function useOCR(detectionSettings: DetectionSettings) {
             const filteredCcMatches = filterAllowlistedMatches(ccMatches, allowlist);
             const filteredPiiMatches = filterAllowlistedMatches(piiMatches, allowlist);
             const filteredSecretMatches = filterAllowlistedMatches(secretMatches, allowlist);
+            const filteredCustomMatches = filterAllowlistedMatches(customMatches, allowlist);
 
-            const allMatches = [...filteredEmailMatches, ...filteredIpMatches, ...filteredCcMatches, ...filteredPiiMatches, ...filteredSecretMatches];
+            const allMatches = [...filteredEmailMatches, ...filteredIpMatches, ...filteredCcMatches, ...filteredPiiMatches, ...filteredSecretMatches, ...filteredCustomMatches];
 
-            // Update stats with Entity counts
+            // Update stats with Entity counts (custom matches added to PII count)
             setDetectionStats({
                 emails: filteredEmailMatches.length,
                 ips: filteredIpMatches.length,
                 creditCards: filteredCcMatches.length,
                 secrets: filteredSecretMatches.length,
-                pii: filteredPiiMatches.length,
+                pii: filteredPiiMatches.length + filteredCustomMatches.length,
             });
 
             // Use blocks for precise redaction with Positional Mapping

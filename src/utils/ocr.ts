@@ -3,6 +3,7 @@ import type { DetectedItem, DetectionSettings } from '../types';
 import { SENSITIVE_PATTERNS } from '../constants/patterns';
 import { DEFAULT_ALLOWLIST } from '../constants/config';
 import { preprocessImage } from './canvas';
+import { generateDatePatterns } from './datePatterns';
 
 // Helper: find all pattern matches with their positions
 export const findMatches = (pattern: RegExp, text: string, type: DetectedItem['type']): Array<{ text: string, type: DetectedItem['type'], index: number }> => {
@@ -11,6 +12,72 @@ export const findMatches = (pattern: RegExp, text: string, type: DetectedItem['t
     let match;
     while ((match = pattern.exec(text)) !== null) {
         matches.push({ text: match[0], type, index: match.index });
+    }
+    return matches;
+};
+
+// Helper: find block word matches (case-insensitive by default)
+export const findBlockWordMatches = (
+    blockWords: string[],
+    text: string,
+    type: DetectedItem['type']
+): Array<{ text: string, type: DetectedItem['type'], index: number }> => {
+    const matches: Array<{ text: string, type: DetectedItem['type'], index: number }> = [];
+    for (const word of blockWords) {
+        if (!word.trim()) continue;
+        // Create a case-insensitive regex with word boundaries
+        const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            matches.push({ text: match[0], type, index: match.index });
+        }
+    }
+    return matches;
+};
+
+// Helper: find custom date matches in multiple formats
+export const findCustomDateMatches = (
+    customDates: string[],
+    text: string,
+    type: DetectedItem['type']
+): Array<{ text: string, type: DetectedItem['type'], index: number }> => {
+    const matches: Array<{ text: string, type: DetectedItem['type'], index: number }> = [];
+    for (const dateStr of customDates) {
+        const patterns = generateDatePatterns(dateStr);
+        for (const pattern of patterns) {
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                // Avoid duplicate matches at the same position
+                const exists = matches.some(m => m.index === match!.index && m.text === match![0]);
+                if (!exists) {
+                    matches.push({ text: match[0], type, index: match.index });
+                }
+            }
+        }
+    }
+    return matches;
+};
+
+// Helper: find custom regex matches
+export const findCustomRegexMatches = (
+    customRegex: DetectionSettings['customRegex'],
+    text: string,
+    type: DetectedItem['type']
+): Array<{ text: string, type: DetectedItem['type'], index: number }> => {
+    const matches: Array<{ text: string, type: DetectedItem['type'], index: number }> = [];
+    for (const rule of customRegex) {
+        try {
+            const flags = rule.caseSensitive ? 'g' : 'gi';
+            const pattern = new RegExp(rule.pattern, flags);
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                matches.push({ text: match[0], type, index: match.index });
+            }
+        } catch {
+            // Skip invalid patterns (should be validated on input, but be safe)
+            console.warn(`Skipping invalid regex pattern: ${rule.pattern}`);
+        }
     }
     return matches;
 };
@@ -37,6 +104,9 @@ const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
     secret: true,
     pii: true,
     allowlist: DEFAULT_ALLOWLIST,
+    blockWords: [],
+    customDates: [],
+    customRegex: [],
 };
 
 interface ProcessImageOptions {
@@ -154,6 +224,12 @@ export const processImageForBatch = async (
         });
     }
 
+    // 6. Custom Rules: Block Words, Custom Dates, Custom Regex (all treated as 'pii' type)
+    const blockWordMatches = findBlockWordMatches(detectionSettings.blockWords || [], fullText, 'pii');
+    const customDateMatches = findCustomDateMatches(detectionSettings.customDates || [], fullText, 'pii');
+    const customRegexMatches = findCustomRegexMatches(detectionSettings.customRegex || [], fullText, 'pii');
+    const customMatches = [...blockWordMatches, ...customDateMatches, ...customRegexMatches];
+
     // Apply allowlist filtering to all match types
     const allowlist = detectionSettings.allowlist || [];
     const filteredEmailMatches = filterAllowlistedMatches(emailMatches, allowlist);
@@ -161,8 +237,9 @@ export const processImageForBatch = async (
     const filteredCcMatches = filterAllowlistedMatches(ccMatches, allowlist);
     const filteredPiiMatches = filterAllowlistedMatches(piiMatches, allowlist);
     const filteredSecretMatches = filterAllowlistedMatches(secretMatches, allowlist);
+    const filteredCustomMatches = filterAllowlistedMatches(customMatches, allowlist);
 
-    const allMatches = [...filteredEmailMatches, ...filteredIpMatches, ...filteredCcMatches, ...filteredPiiMatches, ...filteredSecretMatches];
+    const allMatches = [...filteredEmailMatches, ...filteredIpMatches, ...filteredCcMatches, ...filteredPiiMatches, ...filteredSecretMatches, ...filteredCustomMatches];
 
     console.log(`[Batch] Matches for ${file.name}:`, {
         emails: filteredEmailMatches.map(m => m.text),
@@ -170,15 +247,17 @@ export const processImageForBatch = async (
         creditCards: filteredCcMatches.map(m => m.text),
         secrets: filteredSecretMatches.map(m => m.text),
         pii: filteredPiiMatches.map(m => m.text),
+        custom: filteredCustomMatches.map(m => m.text),
     });
 
     // Create Stats Breakdown (Count actual entities, not redaction boxes)
+    // Custom matches are included in PII count for simplicity
     const detectedBreakdown = {
         emails: filteredEmailMatches.length,
         ips: filteredIpMatches.length,
         creditCards: filteredCcMatches.length,
         secrets: filteredSecretMatches.length,
-        pii: filteredPiiMatches.length,
+        pii: filteredPiiMatches.length + filteredCustomMatches.length,
     };
     const detectedCount = Object.values(detectedBreakdown).reduce((a, b) => a + b, 0);
 

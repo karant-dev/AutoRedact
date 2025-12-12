@@ -7,6 +7,18 @@ interface HeaderProps {
     onAddToAllowlist?: (value: string) => void;
     onRemoveFromAllowlist?: (value: string) => void;
     onResetAllowlist?: () => void;
+    // Block Words
+    onAddBlockWord?: (word: string) => void;
+    onRemoveBlockWord?: (word: string) => void;
+    onResetBlockWords?: () => void;
+    // Custom Dates
+    onAddCustomDate?: (dateStr: string) => string | null;
+    onRemoveCustomDate?: (dateStr: string) => void;
+    onResetCustomDates?: () => void;
+    // Custom Regex
+    onAddCustomRegex?: (pattern: string, caseSensitive: boolean, label?: string) => string | null;
+    onRemoveCustomRegex?: (id: string) => void;
+    onResetCustomRegex?: () => void;
 }
 
 export function Header({
@@ -15,6 +27,15 @@ export function Header({
     onAddToAllowlist,
     onRemoveFromAllowlist,
     onResetAllowlist,
+    onAddBlockWord,
+    onRemoveBlockWord,
+    onResetBlockWords,
+    onAddCustomDate,
+    onRemoveCustomDate,
+    onResetCustomDates,
+    onAddCustomRegex,
+    onRemoveCustomRegex,
+    onResetCustomRegex,
 }: HeaderProps) {
     return (
         <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
@@ -34,6 +55,15 @@ export function Header({
                     onAddToAllowlist={onAddToAllowlist}
                     onRemoveFromAllowlist={onRemoveFromAllowlist}
                     onResetAllowlist={onResetAllowlist}
+                    onAddBlockWord={onAddBlockWord}
+                    onRemoveBlockWord={onRemoveBlockWord}
+                    onResetBlockWords={onResetBlockWords}
+                    onAddCustomDate={onAddCustomDate}
+                    onRemoveCustomDate={onRemoveCustomDate}
+                    onResetCustomDates={onResetCustomDates}
+                    onAddCustomRegex={onAddCustomRegex}
+                    onRemoveCustomRegex={onRemoveCustomRegex}
+                    onResetCustomRegex={onResetCustomRegex}
                 />
             </div>
         </header>
