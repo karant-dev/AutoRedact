@@ -38,7 +38,7 @@ Open [http://localhost:5173](http://localhost:5173) and drop your images.
 
 ### Command Line Interface (CLI)
 
-AutoRedact now supports a fully offline CLI mode using the same powerful engine.
+AutoRedact now supports a fully offline CLI mode using the same powerful engine. (jpg and png support only, for now. PDF support incoming)
 
 ```bash
 # Process a single image
