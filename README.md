@@ -36,6 +36,21 @@ docker compose up -d
 
 Open [http://localhost:5173](http://localhost:5173) and drop your images.
 
+### Command Line Interface (CLI)
+
+AutoRedact now supports a fully offline CLI mode using the same powerful engine.
+
+```bash
+# Process a single image
+npm run cli -- input.jpg
+
+# Disable specific redactors
+npm run cli -- input.jpg --no-emails --no-ips
+
+# Use custom rules
+npm run cli -- input.jpg --block-words "Confidential" --custom-regex "Project-\d+"
+```
+
 ## 🎯 What Gets Redacted
 
 | Type | Pattern |
@@ -56,9 +71,11 @@ Open [http://localhost:5173](http://localhost:5173) and drop your images.
 
 ```text
 src/
+├── adapters/     # Interface implementations (Browser/Node)
 ├── components/   # UI Components
+├── core/         # Pure Logic (Regex, Math, Image Proc)
 ├── hooks/        # Custom Hooks
-├── utils/        # Logic & Helpers
+├── utils/        # Helpers
 ├── types/        # TS Interfaces
 └── App.tsx       # Main Entry
 ```
