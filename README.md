@@ -4,8 +4,6 @@
 
 [![CI](https://github.com/karant-dev/AutoRedact/actions/workflows/ci.yml/badge.svg)](https://github.com/karant-dev/AutoRedact/actions/workflows/ci.yml)
 [![Release](https://github.com/karant-dev/AutoRedact/actions/workflows/release.yml/badge.svg)](https://github.com/karant-dev/AutoRedact/actions/workflows/release.yml)
-[![CI](https://github.com/karant-dev/AutoRedact/actions/workflows/ci.yml/badge.svg)](https://github.com/karant-dev/AutoRedact/actions/workflows/ci.yml)
-[![Release](https://github.com/karant-dev/AutoRedact/actions/workflows/release.yml/badge.svg)](https://github.com/karant-dev/AutoRedact/actions/workflows/release.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/karant-dev/AutoRedact)
