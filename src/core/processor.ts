@@ -66,6 +66,11 @@ export const processImage = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const height = (img as any).naturalHeight || (img as any).height;
 
+    // Validate dimensions
+    if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+        throw new Error('Invalid image dimensions: width and height must be positive numbers');
+    }
+
     const upscaledW = width * scale;
     const upscaledH = height * scale;
 
@@ -132,9 +137,9 @@ export const processImage = async (
         });
     }
 
-    const blockWordMatches = detectionSettings.blockWords ? findBlockWordMatches(detectionSettings.blockWords, fullText, 'pii') : [];
-    const customDateMatches = detectionSettings.customDates ? findCustomDateMatches(detectionSettings.customDates, fullText, 'pii') : [];
-    const customRegexMatches = detectionSettings.customRegex ? findCustomRegexMatches(detectionSettings.customRegex, fullText, 'pii') : [];
+    const blockWordMatches = detectionSettings.blockWords?.length ? findBlockWordMatches(detectionSettings.blockWords, fullText, 'pii') : [];
+    const customDateMatches = detectionSettings.customDates?.length ? findCustomDateMatches(detectionSettings.customDates, fullText, 'pii') : [];
+    const customRegexMatches = detectionSettings.customRegex?.length ? findCustomRegexMatches(detectionSettings.customRegex, fullText, 'pii') : [];
     const customMatches = [...blockWordMatches, ...customDateMatches, ...customRegexMatches];
 
     // Filter
@@ -201,8 +206,7 @@ export const processImage = async (
     const outputCanvas = canvasFactory.createCanvas(width, height);
     const outputCtx = outputCanvas.getContext('2d');
     if (outputCtx) {
-        // cast upscaledCanvas to 'any' because strict ICanvas might NOT be exactly what drawImage expects in all adapters
-        // but typically adapters handle this.
+        // Safe cast via unknown: strictly ICanvas might differ from what drawImage expects in some envs
         outputCtx.drawImage(upscaledCanvas as unknown as AbstractImage, 0, 0, width, height);
     }
 

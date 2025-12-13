@@ -1,6 +1,12 @@
 
+
+// Minimal declaration to avoid deep dependency types in interface
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NodeImage = any;
+
 // Abstract image type (Platform dependent: HTMLImageElement or Node Canvas Image)
-export type AbstractImage = unknown;
+export type AbstractImage = HTMLImageElement | NodeImage;
+
 
 export interface ICanvasContext {
     drawImage(image: AbstractImage, dx: number, dy: number, dw?: number, dh?: number): void;
@@ -19,6 +25,6 @@ export interface ICanvas {
 
 export interface ICanvasFactory {
     createCanvas(width: number, height: number): ICanvas;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    loadImage(source: string | any): Promise<AbstractImage>;
+    // Accepts common image source types for browser and Node environments
+    loadImage(source: string | Blob | File | Buffer): Promise<AbstractImage>;
 }

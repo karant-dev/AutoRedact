@@ -77,6 +77,7 @@ src/
 ├── hooks/        # Custom Hooks
 ├── utils/        # Helpers
 ├── types/        # TS Interfaces
+├── cli.ts        # CLI Entry Point
 └── App.tsx       # Main Entry
 ```
 

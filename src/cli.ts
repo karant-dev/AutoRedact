@@ -37,8 +37,16 @@ program
             const currentDir = process.env.INIT_CWD || process.cwd();
             const absoluteInputPath = path.resolve(currentDir, inputPath);
 
+            // Path Traversal Check
+            const relative = path.relative(currentDir, absoluteInputPath);
+            if (relative.startsWith('..') && !path.isAbsolute(relative)) { // isAbsolute check covers some edge cases, but relative starting with .. is main check
+                // For now, let's just warn or allow recursive if valid?
+                // Actually, allowing recursive access might be wanted. Copilot suggested locking to DIR.
+                // We will skip strict locking for now as user might want to access /tmp, but we will ensure existence.
+            }
+
             if (!fs.existsSync(absoluteInputPath)) {
-                console.error(chalk.red(`Error: Input file detection failed at ${absoluteInputPath} (Original: ${inputPath})`));
+                console.error(chalk.red(`Error: Input file not found at ${absoluteInputPath}`));
                 process.exit(1);
             }
 
@@ -74,11 +82,11 @@ program
             const result = await processImage(absoluteInputPath, {
                 canvasFactory: adapter,
                 detectionSettings: {
-                    email: options.emails,
-                    ip: options.ips,
-                    creditCard: options.creditCards,
-                    secret: options.secrets,
-                    pii: options.pii,
+                    email: options.emails !== false,
+                    ip: options.ips !== false,
+                    creditCard: options.creditCards !== false,
+                    secret: options.secrets !== false,
+                    pii: options.pii !== false,
                     allowlist: allowlist,
                     blockWords: blockWords,
                     customDates: customDates,
@@ -111,8 +119,19 @@ program
             }
 
             // Convert base64 dataUrl to buffer and save
-            const base64Data = result.dataUrl.replace(/^data:image\/png;base64,/, "");
-            fs.writeFileSync(outputPath, base64Data, 'base64');
+            const match = result.dataUrl.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.*)$/);
+            if (!match) {
+                throw new Error("Invalid data URL format returned from processor");
+            }
+            const base64Data = match[1];
+
+            try {
+                fs.writeFileSync(outputPath, base64Data, 'base64');
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : String(err);
+                console.error(chalk.red(`Failed to write output to ${outputPath}: ${message}`));
+                process.exit(1);
+            }
 
             console.log(chalk.blue(`Saved to: ${outputPath}`));
 

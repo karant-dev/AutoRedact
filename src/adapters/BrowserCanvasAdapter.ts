@@ -8,23 +8,31 @@ export class BrowserCanvasAdapter implements ICanvasFactory {
         return canvas as unknown as ICanvas; // HTMLCanvasElement satisfies ICanvas structure
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    loadImage(source: string | any): Promise<AbstractImage> {
+    loadImage(source: string | Blob | File | Buffer): Promise<AbstractImage> {
         return new Promise((resolve, reject) => {
             const img = new Image();
+            let objectUrl: string | null = null;
+
             if (typeof source === 'string') {
                 img.src = source;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } else if ((source as any) instanceof Blob || (source as any) instanceof File) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                img.src = URL.createObjectURL(source as any);
+                objectUrl = URL.createObjectURL(source as any);
+                img.src = objectUrl;
             } else {
                 reject(new Error('Invalid source type'));
                 return;
             }
 
-            img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error('Failed to load image'));
+            img.onload = () => {
+                if (objectUrl) URL.revokeObjectURL(objectUrl);
+                resolve(img);
+            };
+            img.onerror = () => {
+                if (objectUrl) URL.revokeObjectURL(objectUrl);
+                reject(new Error('Failed to load image'));
+            };
         });
     }
 }
