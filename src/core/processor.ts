@@ -45,7 +45,7 @@ export interface ScanResult {
 }
 
 export const processImage = async (
-    source: string | Blob | File,
+    source: string | Blob | File | Buffer,
     options: ProcessImageOptions
 ): Promise<ScanResult> => {
     const {
