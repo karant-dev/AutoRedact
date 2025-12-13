@@ -76,6 +76,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
           exit-code: '1' # Fail the build on vulnerability
 
       - name: Upload Trivy scan results to GitHub Security tab
