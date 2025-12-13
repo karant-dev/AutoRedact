@@ -3,7 +3,7 @@ FROM node:20-slim as builder
 WORKDIR /app
 
 # Install build dependencies for node-canvas (Debian)
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
   build-essential \
   libcairo2-dev \
   libpango1.0-dev \
@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y \
   libjpeg62-turbo \
   libgif7 \
   librsvg2-2 \
+  && npm install -g npm@latest \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
