@@ -117,7 +117,7 @@ npm run cli -- internal-doc.jpg \
 
 ### 🐳 Docker API Examples
 
-The Docker API runs on port 3000 by default. It currently uses standard detection settings (Emails, IPs, Keys, PII).
+The Docker API runs on port 3000 by default. It uses standard detection settings (Emails, IPs, Keys, PII) by default, but is **fully configurable** via the `settings` parameter.
 
 #### 1. Quick Test via Curl
 ```bash
