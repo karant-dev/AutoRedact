@@ -6,9 +6,9 @@ The AutoRedact API provides a simple, high-performance interface for redacting s
 
 By default, the Docker container exposes the API on port `3000`.
 
-\`\`\`
+```
 http://localhost:3000
-\`\`\`
+```
 
 ---
 
@@ -34,7 +34,7 @@ Uploads an image for processing and returns the redacted image.
 
 The \`settings\` field accepts a JSON string matching the \`DetectionSettings\` interface:
 
-\`\`\`json
+```json
 {
   "email": boolean,        // Default: true
   "ip": boolean,           // Default: true
@@ -50,7 +50,7 @@ The \`settings\` field accepts a JSON string matching the \`DetectionSettings\` 
     }
   ]
 }
-\`\`\`
+```
 
 #### Response
 
@@ -65,26 +65,26 @@ The \`settings\` field accepts a JSON string matching the \`DetectionSettings\` 
 ### 1. Basic Usage (Curl)
 Redact an image using default settings:
 
-\`\`\`bash
+```bash
 curl -X POST http://localhost:3000/redact \\
   -F "image=@/path/to/document.jpg" \\
   -o redacted.png
-\`\`\`
+```
 
 ### 2. Advanced Configuration (Curl)
 Disable email redaction and add custom block words:
 
-\`\`\`bash
+```bash
 curl -X POST http://localhost:3000/redact \\
   -F "image=@invoice.jpg" \\
   -F 'settings={"email":false, "blockWords":["CONFIDENTIAL", "SSN"]}' \\
   -o redacted_invoice.png
-\`\`\`
+```
 
 ### 3. Node.js (Native Fetch)
 Requires Node 18+:
 
-\`\`\`javascript
+```javascript
 import fs from 'fs';
 
 const fileBuffer = fs.readFileSync('doc.jpg');
@@ -107,11 +107,11 @@ if (response.ok) {
   fs.writeFileSync('redacted.png', buffer);
   console.log('Stats:', response.headers.get('x-redacted-stats'));
 }
-\`\`\`
+```
 
 ### 4. Python (Requests)
 
-\`\`\`python
+```python
 import requests
 import json
 
@@ -130,4 +130,4 @@ if response.status_code == 200:
     with open('redacted.png', 'wb') as f:
         f.write(response.content)
     print("Stats:", response.headers.get('X-Redacted-Stats'))
-\`\`\`
+```
