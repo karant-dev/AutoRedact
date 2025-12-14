@@ -4,6 +4,8 @@ import { processImage } from './core/processor';
 import { NodeCanvasAdapter } from './adapters/NodeCanvasAdapter';
 import type { DetectionSettings } from './types';
 
+import { DEFAULT_ALLOWLIST } from './constants/config';
+
 const server = fastify({ logger: true });
 
 // Register multipart support for file uploads
@@ -21,40 +23,44 @@ server.get('/health', async () => {
 });
 
 server.post('/redact', async (req, reply) => {
-    const data = await req.file();
-
-    if (!data) {
-        return reply.code(400).send({ error: 'No image file uploaded' });
-    }
-
-    if (!['image/jpeg', 'image/png'].includes(data.mimetype)) {
-        return reply.code(400).send({ error: 'Only .jpg and .png files are supported' });
-    }
+    const parts = req.parts();
+    let imageBuffer: Buffer | undefined;
+    let settings: DetectionSettings = {
+        email: true,
+        ip: true,
+        creditCard: true,
+        secret: true,
+        pii: true,
+        allowlist: [...DEFAULT_ALLOWLIST],
+        blockWords: [],
+        customDates: [],
+        customRegex: []
+    };
 
     try {
-        const buffer = await data.toBuffer();
+        for await (const part of parts) {
+            if (part.type === 'file' && part.fieldname === 'image') {
+                if (!['image/jpeg', 'image/png'].includes(part.mimetype)) {
+                    // We continue to consume the stream to avoid hanging, but note the error
+                    // Or just throw immediately if we want to fail fast
+                    throw new Error('Only .jpg and .png files are supported');
+                }
+                imageBuffer = await part.toBuffer();
+            } else if (part.type === 'field' && part.fieldname === 'settings') {
+                try {
+                    const parsed = JSON.parse(part.value as string);
+                    settings = { ...settings, ...parsed };
+                } catch {
+                    req.log.warn('Failed to parse settings JSON');
+                }
+            }
+        }
 
-        // Parse settings (optional)
-        // Note: multipart fields come as streams or values. 
-        // For simplicity, we can inspect other fields if parsed, 
-        // but @fastify/multipart with req.file() iterates.
-        // Let's attach settings via a specific header or query param for mvp, 
-        // or parse fields if needed. 
-        // Better: simple default settings for now, allow enhancement later.
-        const settings: DetectionSettings = {
-            email: true,
-            ip: true,
-            creditCard: true,
-            secret: true,
-            pii: true,
-            // Default empty limits
-            allowlist: [],
-            blockWords: [],
-            customDates: [],
-            customRegex: []
-        };
+        if (!imageBuffer) {
+            return reply.code(400).send({ error: 'No image file uploaded' });
+        }
 
-        const result = await processImage(buffer, {
+        const result = await processImage(imageBuffer, {
             canvasFactory: adapter,
             detectionSettings: settings,
         });
@@ -70,9 +76,11 @@ server.post('/redact', async (req, reply) => {
         reply.type('image/png');
         return outputBuffer;
 
-    } catch (err) {
+    } catch (err: unknown) {
         req.log.error(err);
-        return reply.code(500).send({ error: 'Redaction processing failed' });
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        const status = errorMessage.includes('supported') ? 400 : 500;
+        return reply.code(status).send({ error: errorMessage || 'Redaction processing failed' });
     }
 });
 

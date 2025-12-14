@@ -115,57 +115,13 @@ npm run cli -- internal-doc.jpg \
 
 ---
 
-### 🐳 Docker API Examples
+The Docker API runs on port 3000 by default. It uses standard detection settings (Emails, IPs, Keys, PII) by default, but is **fully configurable** via the `settings` parameter.
 
-The Docker API runs on port 3000 by default. It currently uses standard detection settings (Emails, IPs, Keys, PII).
+👉 **[View Full API Documentation](docs/API.md)** for detailed usage, schema, and Python/Node.js examples.
 
-#### 1. Quick Test via Curl
+#### Quick Test (Curl)
 ```bash
 curl -X POST http://localhost:3000/redact \
   -F "image=@/path/to/doc.jpg" \
   -o redacted.png
-```
-*Check the `X-Redacted-Stats` header in the response for detection counts.*
-
-#### 2. Python Integration
-Process images programmatically in your Python apps:
-
-```python
-import requests
-
-url = 'http://localhost:3000/redact'
-files = {'image': open('contract.jpg', 'rb')}
-
-response = requests.post(url, files=files)
-
-if response.status_code == 200:
-    with open('redacted_contract.png', 'wb') as f:
-        f.write(response.content)
-    print("Stats:", response.headers.get('X-Redacted-Stats'))
-else:
-    print("Error:", response.text)
-```
-
-#### 3. Node.js Integration (Native Fetch)
-Requires Node.js 18+. No extra libraries needed!
-
-```javascript
-import fs from 'fs';
-
-const fileBuffer = fs.readFileSync('id_card.jpg');
-const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
-
-const formData = new FormData();
-formData.append('image', blob, 'id_card.jpg');
-
-const response = await fetch('http://localhost:3000/redact', {
-  method: 'POST',
-  body: formData
-});
-
-if (response.ok) {
-  const buffer = Buffer.from(await response.arrayBuffer());
-  fs.writeFileSync('redacted_id.png', buffer);
-  console.log('Stats:', response.headers.get('x-redacted-stats'));
-}
 ```
