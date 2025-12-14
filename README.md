@@ -169,3 +169,14 @@ if (response.ok) {
   console.log('Stats:', response.headers.get('x-redacted-stats'));
 }
 ```
+
+#### 4. Custom Configuration (JSON)
+You can fine-tune the API detection by passing a `settings` JSON field:
+
+```bash
+# Disable Email redaction and add custom block words
+curl -X POST http://localhost:3000/redact \
+  -F "image=@doc.jpg" \
+  -F 'settings={"email":false, "blockWords":["CONFIDENTIAL"]}' \
+  -o redacted.png
+```
