@@ -43,6 +43,7 @@ export const convertPdfToImages = async (pdfPath: string): Promise<string[]> => 
 
         process.on('close', (code) => {
             if (code !== 0) {
+                cleanupTempDir(tempDir);
                 reject(new Error(`pdftoppm failed with code ${code}`));
                 return;
             }
@@ -61,11 +62,13 @@ export const convertPdfToImages = async (pdfPath: string): Promise<string[]> => 
 
                 resolve(files);
             } catch (err) {
+                cleanupTempDir(tempDir);
                 reject(err);
             }
         });
 
         process.on('error', (err) => {
+            cleanupTempDir(tempDir);
             reject(err);
         });
     });
