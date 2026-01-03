@@ -17,7 +17,8 @@ Automatic, client-side image redaction using Tesseract.js.
 ## Features
 - **Automatic Detection**: Emails, IPs, credit cards, Secrets
 - **Zero Manual Work**: No selection needed. Just drop and download.
-- **Power Features**: Batch processing, PDF support, ZIP download
+- **Power Features**: Batch processing, PDF support (Browser & CLI), ZIP download
+- **CLI Support**: Full CLI for automation, supports Images and PDFs (requires `poppler-utils`).
 
 ## Security & DevSecOps
 - **SAST**: GitHub CodeQL (JavaScript/TypeScript).

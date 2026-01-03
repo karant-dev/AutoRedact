@@ -8,6 +8,8 @@ import { NodeCanvasAdapter } from './adapters/NodeCanvasAdapter';
 import { processImage } from './core/processor';
 import { DEFAULT_ALLOWLIST } from './constants/config';
 import type { DetectionSettings } from './types';
+import { hasPdfDeps, convertPdfToImages, cleanupTempDir, isPdfFile } from './utils/pdf-node';
+import { createCanvas, loadImage } from 'canvas';
 
 const program = new Command();
 
@@ -66,8 +68,6 @@ program
                 : [];
 
             // Parse Custom Regex (Repeatable flag)
-            // Commander 7+ handles variadic args if specified, or we might need to handle it differently depending on version.
-            // Assuming string[] if repeated, or string if once.
             let customRegexRules: DetectionSettings['customRegex'] = [];
             if (options.customRegex) {
                 const patterns = Array.isArray(options.customRegex) ? options.customRegex : [options.customRegex];
@@ -79,61 +79,157 @@ program
                 }));
             }
 
-            const result = await processImage(absoluteInputPath, {
-                canvasFactory: adapter,
-                detectionSettings: {
-                    email: options.emails !== false,
-                    ip: options.ips !== false,
-                    creditCard: options.creditCards !== false,
-                    secret: options.secrets !== false,
-                    pii: options.pii !== false,
-                    allowlist: allowlist,
-                    blockWords: blockWords,
-                    customDates: customDates,
-                    customRegex: customRegexRules
-                },
-                onProgress: (p) => {
-                    process.stdout.write(`\rOCR Progress: ${Math.round(p)}%`);
+            const detectionSettings: DetectionSettings = {
+                email: options.emails !== false,
+                ip: options.ips !== false,
+                creditCard: options.creditCards !== false,
+                secret: options.secrets !== false,
+                pii: options.pii !== false,
+                allowlist: allowlist,
+                blockWords: blockWords,
+                customDates: customDates,
+                customRegex: customRegexRules
+            };
+
+            const isPdf = isPdfFile(absoluteInputPath);
+
+            if (isPdf) {
+                // PDF Processing Logic
+                if (!await hasPdfDeps()) {
+                    console.error(chalk.red('Error: PDF processing requires "pdftoppm" (poppler-utils) to be installed.'));
+                    console.error(chalk.yellow('  - Mac: brew install poppler'));
+                    console.error(chalk.yellow('  - Ubuntu: sudo apt-get install poppler-utils'));
+                    process.exit(1);
                 }
-            });
 
-            console.log(chalk.green('\n\nRedaction Complete! ✅'));
-            console.log('--------------------------------');
-            console.log(`Emails Found:       ${result.detectedBreakdown.emails}`);
-            console.log(`IPs Found:          ${result.detectedBreakdown.ips}`);
-            console.log(`Credit Cards Found: ${result.detectedBreakdown.creditCards}`);
-            console.log(`Secrets Found:      ${result.detectedBreakdown.secrets}`);
-            console.log(`PII/Other Found:    ${result.detectedBreakdown.pii}`);
-            console.log('--------------------------------');
+                console.log(chalk.blue('Converting PDF to images for processing...'));
+                let pageImages: string[] = [];
+                try {
+                    pageImages = await convertPdfToImages(absoluteInputPath);
+                } catch (err) {
+                    throw new Error(`Failed to convert PDF: ${err}`);
+                }
 
-            // Save Output
-            let outputPath = options.output;
-            if (outputPath) {
-                // Fix for 'npm run': Resolve relative output path against user's CWD
-                outputPath = path.resolve(currentDir, outputPath);
+                if (pageImages.length === 0) {
+                    throw new Error('No pages found in PDF');
+                }
+
+                console.log(chalk.blue(`Processing ${pageImages.length} pages...`));
+
+                // Determine output path for PDF
+                let outputPath = options.output;
+                if (outputPath) {
+                    outputPath = path.resolve(currentDir, outputPath);
+                } else {
+                    const dir = path.dirname(absoluteInputPath);
+                    const ext = path.extname(absoluteInputPath);
+                    const name = path.basename(absoluteInputPath, ext);
+                    outputPath = path.join(dir, `redacted-${name}.pdf`);
+                }
+
+                // Process first page to get dimensions for PDF canvas (assuming uniform pages for now, or resize logic)
+                // Actually, we should probably handle variable page sizes if possible.
+                // node-canvas PDF surface is created with a fixed size? 
+                // "The first page is created with the width and height passed to the function."
+                // "Subsequent pages can be added with addPage()." - docs don't explicitly say addPage takes size in 2.x?
+                // Actually node-canvas v2.9+ addPage(w, h). We have canvas ^3.2.0.
+
+                // Helper to load image dimensions
+                const firstImg = await loadImage(pageImages[0]);
+                const pdfCanvas = createCanvas(firstImg.width, firstImg.height, 'pdf');
+                const pdfCtx = pdfCanvas.getContext('2d');
+
+                // We don't draw the first page yet, we loop.
+                // Wait, creating canvas creates first page automatically? 
+                // Usually yes. So we should process page 0, draw it. Then for others addPage.
+
+                let totalEmails = 0, totalIps = 0, totalCC = 0, totalSecrets = 0, totalPii = 0;
+
+                for (let i = 0; i < pageImages.length; i++) {
+                    const pagePath = pageImages[i];
+                    process.stdout.write(`\rProcessing Page ${i + 1}/${pageImages.length}... `);
+
+                    const result = await processImage(pagePath, {
+                        canvasFactory: adapter,
+                        detectionSettings: detectionSettings,
+                        // onProgress: (p) => ... // skip granular progress for multi-page to avoid spam
+                    });
+
+                    // Aggregate stats
+                    totalEmails += result.detectedBreakdown.emails;
+                    totalIps += result.detectedBreakdown.ips;
+                    totalCC += result.detectedBreakdown.creditCards;
+                    totalSecrets += result.detectedBreakdown.secrets;
+                    totalPii += result.detectedBreakdown.pii;
+
+                    // Draw to PDF
+                    // Load the redacted image (result.dataUrl)
+                    const redactedImg = await loadImage(result.dataUrl);
+
+                    if (i > 0) {
+                        pdfCtx.addPage(redactedImg.width, redactedImg.height);
+                    } else {
+                        // For first page, ensure size matches if it differed from initial call variables?
+                        // We initialized with firstImg.width. Should be same.
+                    }
+
+                    pdfCtx.drawImage(redactedImg, 0, 0, redactedImg.width, redactedImg.height);
+                }
+
+                process.stdout.write('\n');
+
+                // Save PDF
+                const pdfBuffer = pdfCanvas.toBuffer('application/pdf');
+                fs.writeFileSync(outputPath, pdfBuffer);
+
+                // Cleanup
+                cleanupTempDir(path.dirname(pageImages[0]));
+
+                console.log(chalk.green('\n\nPDF Redaction Complete! ✅'));
+                console.log('--------------------------------');
+                console.log(`Emails Found:       ${totalEmails}`);
+                console.log(`IPs Found:          ${totalIps}`);
+                console.log(`Credit Cards Found: ${totalCC}`);
+                console.log(`Secrets Found:      ${totalSecrets}`);
+                console.log(`PII/Other Found:    ${totalPii}`);
+                console.log('--------------------------------');
+                console.log(chalk.blue(`Saved to: ${outputPath}`));
+
             } else {
-                const dir = path.dirname(absoluteInputPath); // Use absolute input path's dir
-                const ext = path.extname(absoluteInputPath);
-                const name = path.basename(absoluteInputPath, ext);
-                outputPath = path.join(dir, `redacted-${name}.png`);
-            }
+                // Single Image Processing
+                const result = await processImage(absoluteInputPath, {
+                    canvasFactory: adapter,
+                    detectionSettings: detectionSettings,
+                    onProgress: (p) => {
+                        process.stdout.write(`\rOCR Progress: ${Math.round(p)}%`);
+                    }
+                });
 
-            // Convert base64 dataUrl to buffer and save
-            const match = result.dataUrl.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.*)$/);
-            if (!match) {
-                throw new Error("Invalid data URL format returned from processor");
-            }
-            const base64Data = match[1];
+                console.log(chalk.green('\n\nRedaction Complete! ✅'));
+                console.log('--------------------------------');
+                console.log(`Emails Found:       ${result.detectedBreakdown.emails}`);
+                console.log(`IPs Found:          ${result.detectedBreakdown.ips}`);
+                console.log(`Credit Cards Found: ${result.detectedBreakdown.creditCards}`);
+                console.log(`Secrets Found:      ${result.detectedBreakdown.secrets}`);
+                console.log(`PII/Other Found:    ${result.detectedBreakdown.pii}`);
+                console.log('--------------------------------');
 
-            try {
-                fs.writeFileSync(outputPath, base64Data, 'base64');
-            } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : String(err);
-                console.error(chalk.red(`Failed to write output to ${outputPath}: ${message}`));
-                process.exit(1);
-            }
+                // Save Output
+                let outputPath = options.output;
+                if (outputPath) {
+                    outputPath = path.resolve(currentDir, outputPath);
+                } else {
+                    const dir = path.dirname(absoluteInputPath);
+                    const ext = path.extname(absoluteInputPath);
+                    const name = path.basename(absoluteInputPath, ext);
+                    outputPath = path.join(dir, `redacted-${name}.png`);
+                }
 
-            console.log(chalk.blue(`Saved to: ${outputPath}`));
+                const match = result.dataUrl.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.*)$/);
+                if (!match) throw new Error("Invalid data URL");
+                fs.writeFileSync(outputPath, match[1], 'base64');
+                console.log(chalk.blue(`Saved to: ${outputPath}`));
+            }
 
         } catch (error) {
             console.error(chalk.red('\nFatal Error:'), error);
