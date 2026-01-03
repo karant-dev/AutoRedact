@@ -8,7 +8,7 @@ import { NodeCanvasAdapter } from './adapters/NodeCanvasAdapter';
 import { processImage } from './core/processor';
 import { DEFAULT_ALLOWLIST } from './constants/config';
 import type { DetectionSettings } from './types';
-import { hasPdfDeps, convertPdfToImages, cleanupTempDir } from './utils/pdf-node';
+import { hasPdfDeps, convertPdfToImages, cleanupTempDir, isPdfFile } from './utils/pdf-node';
 import { createCanvas, loadImage } from 'canvas';
 
 const program = new Command();
@@ -91,7 +91,7 @@ program
                 customRegex: customRegexRules
             };
 
-            const isPdf = absoluteInputPath.toLowerCase().endsWith('.pdf');
+            const isPdf = isPdfFile(absoluteInputPath);
 
             if (isPdf) {
                 // PDF Processing Logic

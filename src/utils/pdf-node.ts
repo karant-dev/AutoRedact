@@ -76,3 +76,16 @@ export const cleanupTempDir = (dir: string) => {
         fs.rmSync(dir, { recursive: true, force: true });
     }
 };
+
+export const isPdfFile = (filePath: string): boolean => {
+    try {
+        const fd = fs.openSync(filePath, 'r');
+        const buffer = Buffer.alloc(5);
+        fs.readSync(fd, buffer, 0, 5, 0);
+        fs.closeSync(fd);
+        // Check for %PDF- standard header
+        return buffer.toString('ascii') === '%PDF-';
+    } catch {
+        return false;
+    }
+};
