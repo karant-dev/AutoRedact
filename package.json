@@ -1,7 +1,7 @@
 {
   "name": "auto-redact",
   "private": true,
-  "version": "2.1.2",
+  "version": "2.1.3",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
