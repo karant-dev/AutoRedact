@@ -46,6 +46,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
   libjpeg62-turbo \
   libgif7 \
   librsvg2-2 \
+  && npm install -g npm@latest \
   && npm install -g tar@7.5.3 \
   && rm -rf /usr/local/lib/node_modules/npm/node_modules/tar \
   && cp -r /usr/local/lib/node_modules/tar /usr/local/lib/node_modules/npm/node_modules/ \
