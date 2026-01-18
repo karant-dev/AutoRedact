@@ -51,6 +51,8 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
   && rm -rf /usr/local/lib/node_modules/npm/node_modules/tar \
   && cp -r /usr/local/lib/node_modules/tar /usr/local/lib/node_modules/npm/node_modules/ \
   && rm -rf /usr/local/lib/node_modules/tar \
+  && rm -rf /root/.npm \
+  && rm -rf ~/.npm \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
@@ -61,7 +63,8 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/tsconfig.json ./
 
 # Install tsx globally
-RUN npm install -g tsx
+RUN npm install -g tsx \
+  && rm -rf /root/.npm
 
 USER node
 EXPOSE 3000
