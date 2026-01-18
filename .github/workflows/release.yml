@@ -68,7 +68,17 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          exit-code: '1' # Fail the build on vulnerability
+          exit-code: '0' # Don't fail yet, just generate report
+          trivyignores: .trivyignore
+          ignore-unfixed: true
+
+      - name: Run Trivy vulnerability scanner (Console Output)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1' # Fail here to stop the build
           trivyignores: .trivyignore
           ignore-unfixed: true
 
