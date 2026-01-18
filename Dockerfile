@@ -39,14 +39,17 @@ FROM node:20-slim as api
 WORKDIR /app
 
 # Install runtime dependencies for node-canvas (Debian)
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
   libcairo2 \
   libpango-1.0-0 \
   libpangocairo-1.0-0 \
   libjpeg62-turbo \
   libgif7 \
   librsvg2-2 \
-  && npm install -g npm@latest \
+  && npm install -g tar@7.5.3 \
+  && rm -rf /usr/local/lib/node_modules/npm/node_modules/tar \
+  && cp -r /usr/local/lib/node_modules/tar /usr/local/lib/node_modules/npm/node_modules/ \
+  && rm -rf /usr/local/lib/node_modules/tar \
   && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
