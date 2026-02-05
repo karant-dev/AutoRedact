@@ -19,27 +19,15 @@ RUN npm run build
 # Prune dev dependencies (keep prod only for copying)
 RUN npm prune --production
 
-# Stage 2: Web (Nginx)
-FROM nginx:alpine as web
-RUN apk add --no-cache curl
-RUN touch /var/run/nginx.pid && \
-  chown -R nginx:nginx /var/run/nginx.pid && \
-  chown -R nginx:nginx /var/cache/nginx && \
-  chown -R nginx:nginx /usr/share/nginx/html
-RUN rm -rf /usr/share/nginx/html/*
-COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
-COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
-USER nginx
-EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:8080/ || exit 1
-CMD ["nginx", "-g", "daemon off;"]
-
-# Stage 3: API (Node)
-FROM node:20-slim as api
+# Stage 2: Production (Nginx + Node API)
+FROM node:20-slim as production
 WORKDIR /app
 
-# Install runtime dependencies for node-canvas (Debian)
+# Install nginx, supervisord and runtime dependencies
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
+  nginx \
+  supervisor \
+  curl \
   libcairo2 \
   libpango-1.0-0 \
   libpangocairo-1.0-0 \
@@ -55,9 +43,10 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
   && rm -rf ~/.npm \
   && rm -rf /var/lib/apt/lists/*
 
+# Copy built assets
 COPY package*.json ./
-# Copy built node_modules from builder
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist /usr/share/nginx/html
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/tsconfig.json ./
@@ -66,14 +55,16 @@ COPY --from=builder /app/tsconfig.json ./
 RUN npm install -g tsx \
   && rm -rf /root/.npm
 
-USER node
-EXPOSE 3000
-# wget is not in slim? use curl or node script? node:20-slim usually has curl? 
-# Let's check. Standard slim has minimal.
-# Installing curl/wget in api stage if missing.
-USER root
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-USER node
+# Configure nginx
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/sites-enabled/default
 
-HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:3000/health || exit 1
-CMD ["npm", "run", "api"]
+# Configure supervisord
+RUN mkdir -p /var/log/supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:8080/api/health || exit 1
+
+EXPOSE 8080
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
