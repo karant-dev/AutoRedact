@@ -47,7 +47,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
   libgif7 \
   librsvg2-2 \
   && npm install -g npm@latest \
-  && npm install -g tar@7.5.3 \
+  && npm install -g tar@7.5.11 \
   && rm -rf /usr/local/lib/node_modules/npm/node_modules/tar \
   && cp -r /usr/local/lib/node_modules/tar /usr/local/lib/node_modules/npm/node_modules/ \
   && rm -rf /usr/local/lib/node_modules/tar \
