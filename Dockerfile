@@ -100,10 +100,16 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/tsconfig.json ./
-COPY package*.json ./
+COPY package.json ./
 
-# Install tsx globally
-RUN npm install -g tsx && rm -rf /root/.npm
+# Install tsx globally + patch npm's bundled tar
+RUN npm install -g tsx \
+  && npm install -g npm@latest \
+  && npm install -g tar@7.5.11 \
+  && rm -rf /usr/local/lib/node_modules/npm/node_modules/tar \
+  && cp -r /usr/local/lib/node_modules/tar /usr/local/lib/node_modules/npm/node_modules/ \
+  && rm -rf /usr/local/lib/node_modules/tar \
+  && rm -rf /root/.npm
 
 # Entrypoint: starts nginx + API via bash (no Python/supervisord needed)
 COPY entrypoint.sh /entrypoint.sh
