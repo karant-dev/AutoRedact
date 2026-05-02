@@ -1,10 +1,12 @@
 services:
-  webapp:
+  # Single-image production setup: nginx (UI) + Node API on port 8080
+  # Access: http://localhost:8080 (web), http://localhost:8080/api/redact (API)
+  autoredact:
     build:
       context: .
-      target: web
-    image: karantdev/autoredact:web
-    container_name: autoredact-web
+      target: production
+    image: karantdev/autoredact:latest
+    container_name: autoredact
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -16,19 +18,29 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  api:
-    build:
-      context: .
-      target: api
-    image: karantdev/autoredact:api
-    container_name: autoredact-api
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    security_opt:
-      - no-new-privileges:true
+  # --- Multi-service alternative (separate web + api containers) ---
+  # Uncomment below and remove the 'autoredact' service above to use this instead.
+  #
+  # webapp:
+  #   build:
+  #     context: .
+  #     target: web
+  #   image: karantdev/autoredact:web
+  #   container_name: autoredact-web
+  #   ports:
+  #     - "8080:8080"
+  #   restart: unless-stopped
+  #   security_opt:
+  #     - no-new-privileges:true
+  #
+  # api:
+  #   build:
+  #     context: .
+  #     target: api
+  #   image: karantdev/autoredact:api
+  #   container_name: autoredact-api
+  #   ports:
+  #     - "3000:3000"
+  #   restart: unless-stopped
+  #   security_opt:
+  #     - no-new-privileges:true
