@@ -62,7 +62,7 @@ jobs:
       # 2. Scan Local Image with Trivy
       # Fail if Critical/High vulnerabilities are found
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           format: 'sarif'
@@ -73,7 +73,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Run Trivy vulnerability scanner (Console Output)
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           format: 'table'
