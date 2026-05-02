@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.3] - 2026-05-02
+
+### ✨ New Features
+- **Footer Attribution**: Added GitHub repository link with icon and author credit linking to [karant.dev](https://karant.dev).
+
+### 🔧 Maintenance
+- Bumped `aquasecurity/trivy-action` to latest in the security scanning workflow.
+
+---
+
 ## [1.1.0] - 2025-12-12
 
 ### 🚀 New Features
