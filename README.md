@@ -115,13 +115,13 @@ npm run cli -- internal-doc.jpg \
 
 ---
 
-The Docker API runs on port 3000 by default. It uses standard detection settings (Emails, IPs, Keys, PII) by default, but is **fully configurable** via the `settings` parameter.
+The Docker API is proxied through nginx and available on port `8080` at `/api/`. It uses standard detection settings (Emails, IPs, Keys, PII) by default, but is **fully configurable** via the `settings` parameter.
 
 👉 **[View Full API Documentation](docs/API.md)** for detailed usage, schema, and Python/Node.js examples.
 
 #### Quick Test (Curl)
 ```bash
-curl -X POST http://localhost:3000/redact \
+curl -X POST http://localhost:8080/api/redact \
   -F "image=@/path/to/doc.jpg" \
   -o redacted.png
 ```
